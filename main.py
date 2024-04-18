@@ -28,53 +28,53 @@ class Conta:
         self._cliente = cliente
         self._historico = Historico()
 
-        @classmethod
-        def nova_conta(cls, cliente, numero):
-            return cls(numero, cliente)
-        
-        @property
-        def saldo(self):
-            return self._saldo
-        
-        @property
-        def numero(self):
-            return self._numero
-        
-        @property
-        def agencia(self):
-            return self._agencia
-        
-        @property
-        def cliente(self):
-            return self._cliente
-        
-        @property
-        def historico(self):
-            return self._historico
-        
-        def sacar(self, valor):
-            saldo = self._saldo
-            excedeu_saldo = valor > saldo
+    @classmethod
+    def nova_conta(cls, cliente, numero):
+        return cls(numero, cliente)
+    
+    @property
+    def saldo(self):
+        return self._saldo
+    
+    @property
+    def numero(self):
+        return self._numero
+    
+    @property
+    def agencia(self):
+        return self._agencia
+    
+    @property
+    def cliente(self):
+        return self._cliente
+    
+    @property
+    def historico(self):
+        return self._historico
+    
+    def sacar(self, valor):
+        saldo = self._saldo
+        excedeu_saldo = valor > saldo
 
-            if excedeu_saldo:
-                print("\n@@@ Operação falhou! Você não tem saldo suficiente. @@@")
-                return False
-            elif valor <= 0:
-                print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
-                return False
+        if excedeu_saldo:
+            print("\n@@@ Operação falhou! Você não tem saldo suficiente. @@@")
+            return False
+        elif valor <= 0:
+            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
+            return False
 
-            self._saldo -= valor
-            print("\n=== Saque realizado com sucesso! ===")
-            return True
+        self._saldo -= valor
+        print("\n=== Saque realizado com sucesso! ===")
+        return True
 
-        def depositar(self, valor):
-            if valor <= 0:
-                print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
-                return False
+    def depositar(self, valor):
+        if valor <= 0:
+            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
+            return False
 
-            self._saldo += valor
-            print("\n=== Depósito realizado com sucesso! ===")
-            return True
+        self._saldo += valor
+        print("\n=== Depósito realizado com sucesso! ===")
+        return True
         
 class ContaCorrente(Conta):
     def __init__(self, numero, cliente, limite=500, limite_saques=3):
@@ -97,7 +97,10 @@ class ContaCorrente(Conta):
             print("\n@@@ Operação falhou! Número máximo de saques excedido. @@@")
 
         else:
-            return super().sacar(valor)
+            sucesso_saque = super().sacar(valor)
+            if sucesso_saque:
+                self.historico.adicionar_transacao(Saque(valor))
+            return sucesso_saque
 
         return False
     
@@ -108,6 +111,27 @@ class ContaCorrente(Conta):
             Titular:\t{self.cliente.nome}
         """
     
+class ContaPoupanca(Conta):
+    def __init__(self, numero, cliente, limite=0):
+        super().__init__(numero, cliente)
+        self._limite = limite  # Limite de saque permitido na conta poupança
+
+    def sacar(self, valor):
+        if valor > self.saldo + self._limite:
+            print("\n@@@ Operação falhou! O valor do saque excede o saldo disponível mais o limite. @@@")
+
+        elif valor <= 0:
+            print("\n@@@ Operação falhou! O valor do saque é inválido. @@@")
+        
+        else:
+            # Somente registra a transação se o saque for bem-sucedido
+            sucesso_saque = super().sacar(valor)
+            if sucesso_saque:
+                self.historico.adicionar_transacao(Saque(valor))
+            return sucesso_saque
+
+        return False
+
 class Historico:
     def __init__(self):
         self._transacoes = []
@@ -273,7 +297,19 @@ def criar_conta(numero_conta, clientes, contas):
         print("\n@@@ Cliente não encontrado, fluxo de criação de conta encerrado! @@@")
         return
 
-    conta = ContaCorrente.nova_conta(cliente=cliente, numero=numero_conta)
+    print("Escolha o tipo de conta:")
+    print("[1] Conta Corrente")
+    print("[2] Conta Poupança")
+    tipo_conta = input("=> ")
+
+    if tipo_conta == "1":
+        conta = ContaCorrente.nova_conta(cliente=cliente, numero=numero_conta)
+    elif tipo_conta == "2":
+        conta = ContaPoupanca.nova_conta(cliente=cliente, numero=numero_conta)
+    else:
+        print("\n@@@ Tipo de conta inválido! @@@")
+        return
+
     contas.append(conta)
     cliente.contas.append(conta)
 
