@@ -8,10 +8,10 @@ class Cliente:
         self.contas = []
 
     def realizar_transacao(self, conta, transacao):
-        pass
+        transacao.registrar(conta)
 
     def adicionar_contas(self, conta):
-        pass
+        self.contas.append(conta)
 
 class PessoaFisica(Cliente):
     def __init__(self, nome, data_nascimento, cpf, endereco):
