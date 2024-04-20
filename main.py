@@ -53,28 +53,33 @@ class Conta:
         return self._historico
     
     def sacar(self, valor):
-        saldo = self._saldo
-        excedeu_saldo = valor > saldo
-
-        if excedeu_saldo:
-            print("\n@@@ Operação falhou! Você não tem saldo suficiente. @@@")
+        try:
+            if valor <= 0:
+                raise ValueError("O valor do saque deve ser maior que zero.")
+            
+            if valor > self._saldo:
+                raise ValueError("Saldo insuficiente.")
+            
+            self._saldo -= valor
+            print("\n=== Saque realizado com sucesso! ===")
+            return True
+        
+        except ValueError as e:
+            print("\n@@@ Operação falhou! ", e, "@@@")
             return False
-        elif valor <= 0:
-            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
-            return False
-
-        self._saldo -= valor
-        print("\n=== Saque realizado com sucesso! ===")
-        return True
 
     def depositar(self, valor):
-        if valor <= 0:
-            print("\n@@@ Operação falhou! O valor informado é inválido. @@@")
-            return False
+        try:
+            if valor <= 0:
+                raise ValueError("O valor do depósito deve ser maior que zero.")
 
-        self._saldo += valor
-        print("\n=== Depósito realizado com sucesso! ===")
-        return True
+            self._saldo += valor
+            print("\n=== Depósito realizado com sucesso! ===")
+            return True
+        
+        except ValueError as e:
+            print("\n@@@ Operação falhou! ", e, "@@@")
+            return False
         
 class ContaCorrente(Conta):
     def __init__(self, numero, cliente, limite=500, limite_saques=3):
@@ -83,26 +88,25 @@ class ContaCorrente(Conta):
         self._limite_saques = limite_saques
 
     def sacar(self, valor):
-        numero_saques = len (
-            [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
-        )
+        try:
+            if valor > self._limite:
+                raise ValueError("O valor do saque excede o limite.")
+            
+            numero_saques = len (
+                [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
+            )
 
-        excedeu_limite = valor > self._limite
-        excedeu_saques = numero_saques >= self._limite_saques
-
-        if excedeu_limite:
-            print("\n@@@ Operação falhou! O valor do saque excede o limite. @@@")
-
-        elif excedeu_saques:
-            print("\n@@@ Operação falhou! Número máximo de saques excedido. @@@")
-
-        else:
+            if numero_saques >= self._limite_saques:
+                raise ValueError("Número máximo de saques excedido.")
+            
             sucesso_saque = super().sacar(valor)
             if sucesso_saque:
                 self.historico.adicionar_transacao(Saque(valor))
-            return sucesso_saque
+                return True
 
-        return False
+        except ValueError as e:
+            print("\n@@@ Operação falhou! ", e, "@@@")
+            return False
     
     def __str__(self):
         return f"""\
@@ -117,20 +121,21 @@ class ContaPoupanca(Conta):
         self._limite = limite  # Limite de saque permitido na conta poupança
 
     def sacar(self, valor):
-        if valor > self.saldo + self._limite:
-            print("\n@@@ Operação falhou! O valor do saque excede o saldo disponível mais o limite. @@@")
-
-        elif valor <= 0:
-            print("\n@@@ Operação falhou! O valor do saque é inválido. @@@")
-        
-        else:
-            # Somente registra a transação se o saque for bem-sucedido
+        try:
+            if valor > self.saldo + self._limite:
+                raise ValueError("O valor do saque excede o saldo disponível mais o limite.")
+            
+            if valor <= 0:
+                raise ValueError("O valor do saque é inválido.")
+            
             sucesso_saque = super().sacar(valor)
             if sucesso_saque:
                 self.historico.adicionar_transacao(Saque(valor))
-            return sucesso_saque
-
-        return False
+                return True
+        
+        except ValueError as e:
+            print("\n@@@ Operação falhou! ", e, "@@@")
+            return False
 
 class Historico:
     def __init__(self):
@@ -219,14 +224,18 @@ def depositar(clientes):
         print("\n@@@ Cliente não encontrado! @@@")
         return
 
-    valor = float(input("Informe o valor do depósito: "))
-    transacao = Deposito(valor)
+    try:
+        valor = float(input("Informe o valor do depósito: "))
+        transacao = Deposito(valor)
 
-    conta = recuperar_conta_cliente(cliente)
-    if not conta:
-        return
+        conta = recuperar_conta_cliente(cliente)
+        if not conta:
+            return
 
-    cliente.realizar_transacao(conta, transacao)
+        cliente.realizar_transacao(conta, transacao)
+    
+    except ValueError:
+        print("\n@@@ Valor de depósito inválido! @@@")
 
 def sacar(clientes):
     cpf = input("Informe o CPF do cliente: ")
@@ -236,14 +245,18 @@ def sacar(clientes):
         print("\n@@@ Cliente não encontrado! @@@")
         return
 
-    valor = float(input("Informe o valor do saque: "))
-    transacao = Saque(valor)
+    try:
+        valor = float(input("Informe o valor do saque: "))
+        transacao = Saque(valor)
 
-    conta = recuperar_conta_cliente(cliente)
-    if not conta:
-        return
+        conta = recuperar_conta_cliente(cliente)
+        if not conta:
+            return
 
-    cliente.realizar_transacao(conta, transacao)
+        cliente.realizar_transacao(conta, transacao)
+    
+    except ValueError:
+        print("\n@@@ Valor de saque inválido! @@@")
 
 def exibir_extrato(clientes):
     cpf = input("Informe o CPF do cliente: ")
