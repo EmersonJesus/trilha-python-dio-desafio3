@@ -360,9 +360,11 @@ def main():
             criar_cliente(clientes)
 
         elif opcao == "0":
+            print("\n@@@ Saindo... @@@")
             break
 
         else:
             print("\n@@@ Operação inválida, por favor selecione novamente a operação desejada. @@@")
 
-main()
+if __name__ == "__main__":
+    main()
