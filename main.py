@@ -8,6 +8,10 @@ class Cliente:
         self.contas = []
 
     def realizar_transacao(self, conta, transacao):
+        if len(conta.historico.transacoes_do_dia()) >= 10:
+            print("\n@@@ Voce excedeu o numero de transacoes permitidas para hoje! @@@")
+            return
+        
         transacao.registrar(conta)
 
     def adicionar_contas(self, conta):
@@ -150,9 +154,23 @@ class Historico:
             {
                 "tipo": transacao.__class__.__name__, 
                 "valor": transacao.valor,
-                "data": datetime.now().strftime("%d-%m-%Y %H:%M:%s"),
+                "data": datetime.now().strftime("%d-%m-%Y %H:%M"),
             }
         )
+
+    def gerar_relatorio(self, tipo_transacao=None):
+        for transacao in self._transacoes:
+            if tipo_transacao is None or transacao["tipo"].lower() == tipo_transacao.lower():
+                yield transacao
+
+    def transacoes_do_dia(self):
+        data_atual = datetime.utcnow().date()
+        transacoes = []
+        for  transacao in self._transacoes:
+            data_transacao = datetime.strptime(transacao["data"], "%d-%m-%Y %H:%M:%S").date()
+            if data_atual == data_transacao:
+                transacoes.append(transacao)
+        return transacoes
 
 class Transacao(ABC):
     @property
@@ -216,47 +234,62 @@ def recuperar_conta_cliente(cliente):
     
     return cliente.contas[0]
 
+def validar_cpf(cpf):
+    if not cpf.isdigit() or len(cpf) != 11:
+        return False
+    return True
+
+def obter_valor(mensagem):
+    while True:
+        valor = input(mensagem)
+        if valor.isdigit() and float(valor) > 0:
+            return float(valor)
+        else:
+            print("\n@@@ Valor inválido! Por favor, insira um número positivo. @@@\n")
+
+def encontrar_cliente_por_cpf(cpf, clientes):
+    for cliente in clientes:
+        if cliente.cpf == cpf:
+            return cliente
+    return None
+
 def depositar(clientes):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
-
-    if not cliente:
-        print("\n@@@ Cliente não encontrado! @@@")
+    if not validar_cpf(cpf):
+        print("\n@@@ CPF inválido! Por favor, insira um CPF válido. @@@\n")
         return
 
-    try:
-        valor = float(input("Informe o valor do depósito: "))
-        transacao = Deposito(valor)
+    cliente = encontrar_cliente_por_cpf(cpf, clientes)
+    if not cliente:
+        print("\n@@@ Cliente não encontrado! @@@\n")
+        return
 
-        conta = recuperar_conta_cliente(cliente)
-        if not conta:
-            return
+    valor = obter_valor("Informe o valor do depósito: ")
+    transacao = Deposito(valor)
+    conta = recuperar_conta_cliente(cliente)
+    if not conta:
+        return
 
-        cliente.realizar_transacao(conta, transacao)
-    
-    except ValueError:
-        print("\n@@@ Valor de depósito inválido! @@@")
+    cliente.realizar_transacao(conta, transacao)
 
 def sacar(clientes):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
-
-    if not cliente:
-        print("\n@@@ Cliente não encontrado! @@@")
+    if not validar_cpf(cpf):
+        print("\n@@@ CPF inválido! Por favor, insira um CPF válido. @@@\n")
         return
 
-    try:
-        valor = float(input("Informe o valor do saque: "))
-        transacao = Saque(valor)
+    cliente = encontrar_cliente_por_cpf(cpf, clientes)
+    if not cliente:
+        print("\n@@@ Cliente não encontrado! @@@\n")
+        return
 
-        conta = recuperar_conta_cliente(cliente)
-        if not conta:
-            return
+    valor = obter_valor("Informe o valor do saque: ")
+    transacao = Saque(valor)
+    conta = recuperar_conta_cliente(cliente)
+    if not conta:
+        return
 
-        cliente.realizar_transacao(conta, transacao)
-    
-    except ValueError:
-        print("\n@@@ Valor de saque inválido! @@@")
+    cliente.realizar_transacao(conta, transacao)
 
 def exibir_extrato(clientes):
     cpf = input("Informe o CPF do cliente: ")
@@ -278,14 +311,18 @@ def exibir_extrato(clientes):
         extrato = "Não foram realizadas movimentações."
     else:
         for transacao in transacoes:
-            extrato += f"\n{transacao['tipo']}:\n\tR$ {transacao['valor']:.2f}"
+            extrato += f"\nData: {transacao['data']}\nTipo: {transacao['tipo']}\nValor: R$ {transacao['valor']:.2f}\n"
 
     print(extrato)
-    print(f"\nSaldo:\n\tR$ {conta.saldo:.2f}")
+    print(f"\nSaldo: R$ {conta.saldo:.2f}")
     print("==========================================")
 
 def criar_cliente(clientes):
     cpf = input("Informe o CPF (somente número): ")
+    if not validar_cpf(cpf):
+        print("\n@@@ CPF inválido! Por favor, insira um CPF válido. @@@\n")
+        return
+    
     cliente = filtrar_cliente(cpf, clientes)
 
     if cliente:
